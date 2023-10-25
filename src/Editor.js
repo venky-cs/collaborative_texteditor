@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from "react";
+
 // quill modules
 import Quill from "quill";
 import "quill-emoji";
@@ -7,6 +8,7 @@ import QuillCursors from "quill-cursors";
 import "quill-emoji/dist/quill-emoji.css";
 import "react-quill/dist/quill.snow.css";
 import "quill-focus/src/focus.css";
+
 // yjs connection
 import * as Y from "yjs";
 import { WebrtcProvider } from "y-webrtc";
@@ -25,7 +27,7 @@ const Editor = () => {
         theme: "snow",
         modules: {
           focus: {
-            focusClass: "focused-blot", // Defaults to .focused-blot.
+            focusClass: "focused-blot",
           },
           cursors: true,
           toolbar: {
