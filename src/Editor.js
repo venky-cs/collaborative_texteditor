@@ -9,6 +9,8 @@ import "quill-paste-smart";
 import "quill-emoji/dist/quill-emoji.css";
 import "react-quill/dist/quill.snow.css";
 import "quill-focus/src/focus.css";
+import SearchedStringBlot from "./SearchedStringBlot";
+import Searcher from "./Searcher";
 
 // yjs connection
 import * as Y from "yjs";
@@ -16,143 +18,14 @@ import { WebrtcProvider } from "y-webrtc";
 import { QuillBinding } from "y-quill";
 
 let quillInstance = null;
-
+let searcher;
 const Editor = () => {
   const quillRef = useRef(null);
   Quill?.register("modules/focus", Focus);
   Quill?.register("modules/cursors", QuillCursors);
 
   // find & replace
-  class Searcher {
-    constructor(quillInstance) {
-      this.quill = quillInstance;
-      this.container = document?.getElementById("search-container");
-
-      document
-        ?.getElementById("search")
-        ?.addEventListener("click", this?.search?.bind(this));
-      document
-        ?.getElementById("search-input")
-        ?.addEventListener("keyup", this?.keyPressedHandler?.bind(this));
-
-      document
-        ?.getElementById("replace")
-        ?.addEventListener("click", this?.replace?.bind(this));
-      document
-        ?.getElementById("replace-all")
-        ?.addEventListener("click", this?.replaceAll?.bind(this));
-    }
-
-    search() {
-      //  remove any previous search
-      Searcher.removeStyle();
-      Searcher.SearchedString = document?.getElementById("search-input")?.value;
-      if (Searcher.SearchedString) {
-        let totalText = quillInstance?.getText();
-        let re = new RegExp(Searcher.SearchedString, "gi");
-        let match = re?.test(totalText);
-        if (match) {
-          let indices = (Searcher.occurrencesIndices = totalText?.getIndicesOf(
-            Searcher.SearchedString
-          ));
-          let length = (Searcher.SearchedStringLength =
-            Searcher.SearchedString?.length);
-
-          indices?.forEach((index) =>
-            quillInstance?.formatText(index, length, "SearchedString", true)
-          );
-        } else {
-          Searcher.occurrencesIndices = null;
-          Searcher.currentIndex = 0;
-        }
-      } else {
-        Searcher.removeStyle();
-      }
-    }
-
-    replace() {
-      if (!Searcher.SearchedString) return;
-
-      // if no occurrences, then search first?.
-      if (!Searcher.occurrencesIndices) this?.search();
-      if (!Searcher.occurrencesIndices) return;
-
-      let indices = Searcher.occurrencesIndices;
-
-      let oldString = document?.getElementById("search-input")?.value;
-      let newString = document?.getElementById("replace-input")?.value;
-
-      quillInstance?.deleteText(
-        indices[Searcher.currentIndex],
-        oldString?.length
-      );
-      quillInstance?.insertText(indices[Searcher.currentIndex], newString);
-      quillInstance?.formatText(
-        indices[Searcher.currentIndex],
-        newString?.length,
-        "SearchedString",
-        false
-      );
-      // update the occurrencesIndices?.
-      this?.search();
-    }
-
-    replaceAll() {
-      if (!Searcher.SearchedString) return;
-      let oldStringLen =
-        document?.getElementById("search-input")?.value?.length;
-      let newString = document?.getElementById("replace-input")?.value;
-
-      // if no occurrences, then search first?.
-      if (!Searcher.occurrencesIndices) this?.search();
-      if (!Searcher.occurrencesIndices) return;
-
-      if (Searcher.occurrencesIndices) {
-        while (Searcher.occurrencesIndices) {
-          quillInstance?.deleteText(
-            Searcher.occurrencesIndices[0],
-            oldStringLen
-          );
-          quillInstance?.insertText(Searcher.occurrencesIndices[0], newString);
-
-          // update the occurrencesIndices?.
-          this?.search();
-        }
-      }
-      Searcher.removeStyle();
-    }
-
-    keyPressedHandler(e) {
-      if (e?.key === "Enter") {
-        this?.search();
-      }
-    }
-
-    static removeStyle() {
-      quillInstance?.formatText(
-        0,
-        quillInstance?.getText()?.length,
-        "SearchedString",
-        false
-      );
-    }
-  }
-
-  const Inline = Quill?.import("blots/inline");
-
-  class SearchedStringBlot extends Inline {
-    static create(value) {
-      let node = super.create(value);
-      node.contentEditable = "false";
-      return node;
-    }
-  }
-
-  SearchedStringBlot.blotName = "SearchedString";
-  SearchedStringBlot.className = "ql-searched-string";
-  SearchedStringBlot.tagName = "div";
-
-  Quill?.register("modules/Searcher", Searcher);
+  Quill?.register("modules/Searcher", searcher || Searcher);
   Quill?.register(SearchedStringBlot);
 
   useEffect(() => {
@@ -160,7 +33,7 @@ const Editor = () => {
       quillInstance = new Quill(quillRef?.current, {
         theme: "snow",
         modules: {
-          Searcher: true,
+          Searcher: quillInstance ? true : false,
           focus: {
             focusClass: "focused-blot",
           },
@@ -208,6 +81,7 @@ const Editor = () => {
           "emoji-shortname": true,
         },
       });
+      searcher = new Searcher(quillInstance);
     }
   }, []);
 
@@ -256,6 +130,7 @@ const Editor = () => {
           placeholder="replace"
         />
         <button id="search">find</button>
+        <button id="replace">replace</button>
         <button id="replace-all">replace all</button>
       </div>
     </>
